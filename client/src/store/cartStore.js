@@ -1,7 +1,17 @@
 import { create } from 'zustand';
 
+const loadFavorites = () => {
+  try {
+    const saved = localStorage.getItem('burger_kafe_favorites');
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+};
+
 export const useCartStore = create((set, get) => ({
   items: [], // { id, name, price, image_url, quantity }
+  favorites: loadFavorites(),
 
   addItem: (product) => {
     const items = get().items;
@@ -38,4 +48,18 @@ export const useCartStore = create((set, get) => ({
   getTotalPrice: () => get().items.reduce((sum, i) => sum + i.price * i.quantity, 0),
 
   getTotalCount: () => get().items.reduce((sum, i) => sum + i.quantity, 0),
+
+  toggleFavorite: (productId) => {
+    const current = get().favorites;
+    const next = current.includes(productId)
+      ? current.filter((id) => id !== productId)
+      : [...current, productId];
+    try {
+      localStorage.setItem('burger_kafe_favorites', JSON.stringify(next));
+    } catch {}
+    set({ favorites: next });
+  },
+
+  isFavorite: (productId) => (get().favorites || []).includes(productId),
 }));
+

@@ -1,6 +1,6 @@
 {
-  "name": "Fastfood Buyurtma",
-  "description": "Fastfood buyurtma tizimi - burgerlar, lavashlar, ichimliklar va qo'shimchalar",
+  "name": "Burger Kafe",
+  "description": "Burger Kafe menyusi - burgerlar, lavashlar, ichimliklar va qo'shimchalar",
   "requestFramePermissions": [
     "geolocation"
   ],

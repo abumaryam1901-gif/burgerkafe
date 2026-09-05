@@ -4,7 +4,8 @@ import { useCartStore } from '../store/cartStore.js';
 import { hapticImpact } from '../lib/telegram.js';
 
 export default function ProductCard({ product, categoryName }) {
-  const [isFavorite, setIsFavorite] = useState(false);
+  const isFavorite = useCartStore((s) => s.isFavorite(product.id));
+  const toggleFavorite = useCartStore((s) => s.toggleFavorite);
   const addItem = useCartStore((s) => s.addItem);
   const decreaseItem = useCartStore((s) => s.decreaseItem);
   const quantity = useCartStore((s) => s.getQuantity(product.id));
@@ -24,23 +25,23 @@ export default function ProductCard({ product, categoryName }) {
   const handleToggleFavorite = (e) => {
     e.stopPropagation();
     hapticImpact('light');
-    setIsFavorite(!isFavorite);
+    toggleFavorite(product.id);
   };
 
   return (
-    <div className="relative bg-white rounded-3xl p-3.5 flex flex-col justify-between border border-gray-100 shadow-[0_4px_18px_rgba(0,0,0,0.06)] hover:shadow-[0_6px_22px_rgba(0,0,0,0.09)] transition-all">
+    <div className="relative bg-white dark:bg-[#1E1E22] dark:hover:bg-[#232328] rounded-3xl p-3.5 flex flex-col justify-between border border-gray-100 dark:border-white/10 shadow-[0_4px_18px_rgba(0,0,0,0.06)] dark:shadow-[0_6px_20px_rgba(0,0,0,0.35)] hover:shadow-[0_6px_22px_rgba(0,0,0,0.09)] transition-all">
       {/* Favorite Heart Button */}
       <button
         onClick={handleToggleFavorite}
-        className="absolute top-3.5 right-3.5 z-10 w-8 h-8 rounded-full flex items-center justify-center text-[#8B1121] active:scale-90 transition-transform bg-white/90 shadow-xs border border-gray-100"
+        className="absolute top-3.5 right-3.5 z-10 w-8 h-8 rounded-full flex items-center justify-center text-[#8B1121] dark:text-[#ff4d6d] active:scale-90 transition-transform bg-white/90 dark:bg-zinc-800/90 shadow-xs border border-gray-100 dark:border-white/10"
         aria-label="Sevimlilarga qo'shish"
       >
         <Heart
           size={20}
           strokeWidth={2.2}
           className="transition-colors"
-          fill={isFavorite ? '#8B1121' : 'none'}
-          stroke="#8B1121"
+          fill={isFavorite ? 'currentColor' : 'none'}
+          stroke="currentColor"
         />
       </button>
 
@@ -57,10 +58,10 @@ export default function ProductCard({ product, categoryName }) {
       {/* Text Info */}
       <div className="mt-1 flex-1 flex flex-col justify-between">
         <div>
-          <h3 className="font-bold text-gray-900 text-[15px] leading-snug line-clamp-1">
+          <h3 className="font-bold text-gray-900 dark:text-white text-[15px] leading-snug line-clamp-1">
             {product.name}
           </h3>
-          <p className="text-xs font-normal text-gray-500 mt-0.5 line-clamp-1">
+          <p className="text-xs font-normal text-gray-500 dark:text-zinc-400 mt-0.5 line-clamp-1">
             {categoryName || product.description || 'Fastfood'}
           </p>
         </div>
@@ -68,10 +69,10 @@ export default function ProductCard({ product, categoryName }) {
         {/* Price & Action Button */}
         <div className="flex items-center justify-between mt-3 pt-1">
           <div className="flex items-baseline gap-0.5">
-            <span className="font-bold text-gray-900 text-[15px]">
+            <span className="font-bold text-gray-900 dark:text-white text-[15px]">
               {Number(product.price).toLocaleString()}
             </span>
-            <span className="text-[11px] text-gray-500 font-medium ml-1">
+            <span className="text-[11px] text-gray-500 dark:text-zinc-400 font-medium ml-1">
               so'm
             </span>
           </div>
@@ -79,13 +80,13 @@ export default function ProductCard({ product, categoryName }) {
           {quantity === 0 ? (
             <button
               onClick={handleAdd}
-              className="w-8 h-8 rounded-lg bg-[#8B1121] hover:bg-[#730e1b] text-white flex items-center justify-center shadow-xs active:scale-90 transition"
+              className="w-8 h-8 rounded-lg bg-[#8B1121] hover:bg-[#730e1b] dark:bg-[#A61427] dark:hover:bg-[#bc172c] text-white flex items-center justify-center shadow-xs active:scale-90 transition"
               aria-label="Savatga qo'shish"
             >
               <Plus size={18} strokeWidth={2.6} />
             </button>
           ) : (
-            <div className="flex items-center gap-1 bg-[#8B1121] text-white rounded-lg p-1 shadow-xs">
+            <div className="flex items-center gap-1 bg-[#8B1121] dark:bg-[#A61427] text-white rounded-lg p-1 shadow-xs">
               <button
                 onClick={handleDecrease}
                 className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-black/15 active:scale-90 transition"
