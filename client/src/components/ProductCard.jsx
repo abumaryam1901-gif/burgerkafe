@@ -1,52 +1,107 @@
-import { Plus, Minus } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Minus, Heart } from 'lucide-react';
 import { useCartStore } from '../store/cartStore.js';
 import { hapticImpact } from '../lib/telegram.js';
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, categoryName }) {
+  const [isFavorite, setIsFavorite] = useState(false);
   const addItem = useCartStore((s) => s.addItem);
   const decreaseItem = useCartStore((s) => s.decreaseItem);
   const quantity = useCartStore((s) => s.getQuantity(product.id));
 
-  const handleAdd = () => {
+  const handleAdd = (e) => {
+    e.stopPropagation();
     hapticImpact('light');
     addItem(product);
   };
 
-  const handleDecrease = () => {
+  const handleDecrease = (e) => {
+    e.stopPropagation();
     hapticImpact('light');
     decreaseItem(product.id);
   };
 
+  const handleToggleFavorite = (e) => {
+    e.stopPropagation();
+    hapticImpact('light');
+    setIsFavorite(!isFavorite);
+  };
+
   return (
-    <div className="bg-tg-secondaryBg rounded-2xl overflow-hidden flex flex-col">
-      <img
-        src={product.image_url || 'https://placehold.co/300x200?text=Fastfood'}
-        alt={product.name}
-        className="w-full h-28 object-cover"
-      />
-      <div className="p-3 flex flex-col flex-1">
-        <h3 className="font-semibold text-sm leading-tight">{product.name}</h3>
-        {product.description && (
-          <p className="text-xs text-tg-hint mt-1 line-clamp-2">{product.description}</p>
-        )}
-        <div className="flex items-center justify-between mt-3">
-          <span className="font-bold text-sm">{Number(product.price).toLocaleString()} so'm</span>
+    <div className="relative bg-white rounded-3xl p-3.5 flex flex-col justify-between border border-gray-100 shadow-[0_4px_18px_rgba(0,0,0,0.06)] hover:shadow-[0_6px_22px_rgba(0,0,0,0.09)] transition-all">
+      {/* Favorite Heart Button */}
+      <button
+        onClick={handleToggleFavorite}
+        className="absolute top-3.5 right-3.5 z-10 w-8 h-8 rounded-full flex items-center justify-center text-[#8B1121] active:scale-90 transition-transform bg-white/90 shadow-xs border border-gray-100"
+        aria-label="Sevimlilarga qo'shish"
+      >
+        <Heart
+          size={20}
+          strokeWidth={2.2}
+          className="transition-colors"
+          fill={isFavorite ? '#8B1121' : 'none'}
+          stroke="#8B1121"
+        />
+      </button>
+
+      {/* Product Image */}
+      <div className="w-full pt-1 pb-2 flex items-center justify-center overflow-hidden">
+        <img
+          src={product.image_url || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'}
+          alt={product.name}
+          className="w-full h-32 object-cover rounded-2xl select-none"
+          loading="lazy"
+        />
+      </div>
+
+      {/* Text Info */}
+      <div className="mt-1 flex-1 flex flex-col justify-between">
+        <div>
+          <h3 className="font-bold text-gray-900 text-[15px] leading-snug line-clamp-1">
+            {product.name}
+          </h3>
+          <p className="text-xs font-normal text-gray-500 mt-0.5 line-clamp-1">
+            {categoryName || product.description || 'Fastfood'}
+          </p>
+        </div>
+
+        {/* Price & Action Button */}
+        <div className="flex items-center justify-between mt-3 pt-1">
+          <div className="flex items-baseline gap-0.5">
+            <span className="font-bold text-gray-900 text-[15px]">
+              {Number(product.price).toLocaleString()}
+            </span>
+            <span className="text-[11px] text-gray-500 font-medium ml-1">
+              so'm
+            </span>
+          </div>
 
           {quantity === 0 ? (
             <button
               onClick={handleAdd}
-              className="bg-tg-button text-tg-buttonText w-8 h-8 rounded-full flex items-center justify-center active:scale-90 transition"
+              className="w-8 h-8 rounded-lg bg-[#8B1121] hover:bg-[#730e1b] text-white flex items-center justify-center shadow-xs active:scale-90 transition"
+              aria-label="Savatga qo'shish"
             >
-              <Plus size={16} />
+              <Plus size={18} strokeWidth={2.6} />
             </button>
           ) : (
-            <div className="flex items-center gap-2 bg-tg-button text-tg-buttonText rounded-full px-1">
-              <button onClick={handleDecrease} className="w-7 h-7 flex items-center justify-center active:scale-90">
-                <Minus size={14} />
+            <div className="flex items-center gap-1 bg-[#8B1121] text-white rounded-lg p-1 shadow-xs">
+              <button
+                onClick={handleDecrease}
+                className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-black/15 active:scale-90 transition"
+                aria-label="Kamaytirish"
+              >
+                <Minus size={13} strokeWidth={2.6} />
               </button>
-              <span className="text-sm font-semibold min-w-[16px] text-center">{quantity}</span>
-              <button onClick={handleAdd} className="w-7 h-7 flex items-center justify-center active:scale-90">
-                <Plus size={14} />
+              <span className="text-xs font-bold px-1 min-w-[14px] text-center leading-none">
+                {quantity}
+              </span>
+              <button
+                onClick={handleAdd}
+                className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-black/15 active:scale-90 transition"
+                aria-label="Ko'paytirish"
+              >
+                <Plus size={13} strokeWidth={2.6} />
               </button>
             </div>
           )}

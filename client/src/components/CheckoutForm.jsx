@@ -39,7 +39,7 @@ export default function CheckoutForm({ open, onClose, onSuccess }) {
     setLoading(true);
     try {
       const payload = {
-        telegram_user_id: tgUser?.id || 0,
+        telegram_user_id: tgUser?.id || Math.floor(100000 + Math.random() * 900000),
         customer_name: name.trim(),
         customer_phone: phone.trim(),
         delivery_type: deliveryType,
@@ -64,7 +64,7 @@ export default function CheckoutForm({ open, onClose, onSuccess }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative w-full bg-tg-bg rounded-t-3xl max-h-[90vh] overflow-y-auto p-4">
+      <div className="relative w-full max-w-md mx-auto bg-tg-bg rounded-t-3xl max-h-[90vh] overflow-y-auto p-4 shadow-2xl animate-slide-up">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-lg">Buyurtmani rasmiylashtirish</h2>
           <button onClick={onClose}>

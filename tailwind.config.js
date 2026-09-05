@@ -2,10 +2,10 @@
 export default {
   darkMode: 'class',
   content: [
-    './index.html',
-    './src/**/*.{js,jsx}',
     './client/index.html',
-    './client/src/**/*.{js,jsx}',
+    './client/src/**/*.{js,jsx,ts,tsx}',
+    './index.html',
+    './src/**/*.{js,jsx,ts,tsx}',
   ],
   theme: {
     extend: {

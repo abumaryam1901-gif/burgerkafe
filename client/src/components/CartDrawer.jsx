@@ -10,7 +10,7 @@ export default function CartDrawer({ open, onClose, onCheckout }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative w-full bg-tg-bg rounded-t-3xl max-h-[80vh] flex flex-col animate-slide-up">
+      <div className="relative w-full max-w-md mx-auto bg-tg-bg rounded-t-3xl max-h-[80vh] flex flex-col animate-slide-up shadow-2xl">
         <div className="flex items-center justify-between p-4 border-b border-tg-secondaryBg">
           <h2 className="font-bold text-lg">Savatcha</h2>
           <button onClick={onClose}>

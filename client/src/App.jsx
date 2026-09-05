@@ -60,29 +60,33 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen pb-20">
-      <header className="p-4">
+    <div className="min-h-screen pb-24 max-w-md mx-auto relative bg-tg-bg shadow-sm">
+      <header className="p-4 border-b border-tg-secondaryBg/80">
         <h1 className="text-xl font-bold">🍔 Fastfood Menyu</h1>
       </header>
 
-      <CategoryFilter categories={categories} active={activeCategory} onSelect={setActiveCategory} />
-
-      <main className="grid grid-cols-2 gap-3 px-4 mt-2">
-        {filteredProducts.map((product) => (
-          <ProductCard key={product.id} product={product} />
+      <main className="grid grid-cols-2 gap-3 px-4 mt-4">
+        {products.map((product) => (
+          <ProductCard
+            key={product.id}
+            product={product}
+            categoryName={categories.find((c) => c.id === product.category_id)?.name}
+          />
         ))}
       </main>
 
       {totalCount > 0 && (
-        <button
-          onClick={() => setCartOpen(true)}
-          className="fixed bottom-4 left-4 right-4 bg-tg-button text-tg-buttonText py-3 rounded-2xl flex items-center justify-between px-5 font-semibold shadow-lg"
-        >
-          <span className="flex items-center gap-2">
-            <ShoppingCart size={18} /> {totalCount} ta mahsulot
-          </span>
-          <span>{totalPrice.toLocaleString()} so'm</span>
-        </button>
+        <div className="fixed bottom-4 left-0 right-0 max-w-md mx-auto px-4 z-40 pointer-events-none">
+          <button
+            onClick={() => setCartOpen(true)}
+            className="w-full pointer-events-auto bg-tg-button text-tg-buttonText py-3 rounded-2xl flex items-center justify-between px-5 font-semibold shadow-lg active:scale-[0.99] transition"
+          >
+            <span className="flex items-center gap-2">
+              <ShoppingCart size={18} /> {totalCount} ta mahsulot
+            </span>
+            <span>{totalPrice.toLocaleString()} so'm</span>
+          </button>
+        </div>
       )}
 
       <CartDrawer

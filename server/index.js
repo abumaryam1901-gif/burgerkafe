@@ -1,14 +1,28 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { supabase } from './lib/supabase.js';
 import { bot, notifyCustomer, notifyAdminGroup } from './bot.js';
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, '..');
+const clientDir = path.resolve(rootDir, 'client');
+const clientDistDir = path.resolve(clientDir, 'dist');
+
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// ============ API: HEALTH CHECK ============
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', time: new Date().toISOString() });
+});
 
 // ============ API: MENYUNI OLISH ============
 app.get('/api/menu', async (req, res) => {
@@ -28,9 +42,9 @@ app.get('/api/menu', async (req, res) => {
 
     if (prodErr) throw prodErr;
 
-    res.json({ categories, products });
+    res.json({ categories: categories || [], products: products || [] });
   } catch (err) {
-    console.error(err);
+    console.error('Menyuni olishda xato:', err);
     res.status(500).json({ error: 'Menyuni olishda xatolik yuz berdi' });
   }
 });
@@ -50,8 +64,14 @@ app.post('/api/orders', async (req, res) => {
       items // [{ product_id, quantity }]
     } = req.body;
 
-    if (!telegram_user_id || !customer_name || !customer_phone || !items?.length) {
-      return res.status(400).json({ error: 'Majburiy maydonlar to\'ldirilmagan' });
+    if (
+      telegram_user_id === undefined ||
+      telegram_user_id === null ||
+      !customer_name ||
+      !customer_phone ||
+      !items?.length
+    ) {
+      return res.status(400).json({ error: "Majburiy maydonlar to'ldirilmagan" });
     }
 
     // Narxlarni serverda qayta tekshirish (frontend'dan kelgan narxga ishonmaymiz!)
@@ -68,13 +88,13 @@ app.post('/api/orders', async (req, res) => {
     const itemsForMessage = [];
 
     for (const item of items) {
-      const product = dbProducts.find((p) => p.id === item.product_id);
+      const product = dbProducts?.find((p) => p.id === item.product_id);
       if (!product || !product.is_available) {
         return res.status(400).json({ error: `Mahsulot mavjud emas: ID ${item.product_id}` });
       }
       const qty = Number(item.quantity);
       if (!qty || qty <= 0) {
-        return res.status(400).json({ error: 'Miqdor noto\'g\'ri' });
+        return res.status(400).json({ error: "Miqdor noto'g'ri" });
       }
       const realPrice = Number(product.price);
       total_price += realPrice * qty;
@@ -86,10 +106,10 @@ app.post('/api/orders', async (req, res) => {
     const { data: order, error: orderErr } = await supabase
       .from('orders')
       .insert({
-        telegram_user_id,
+        telegram_user_id: Number(telegram_user_id) || 0,
         customer_name,
         customer_phone,
-        delivery_type,
+        delivery_type: delivery_type || 'yetkazib_berish',
         address: address || null,
         location_lat: location_lat || null,
         location_lng: location_lng || null,
@@ -107,25 +127,61 @@ app.post('/api/orders', async (req, res) => {
     const { error: itemsErr } = await supabase.from('order_items').insert(itemsToInsert);
     if (itemsErr) throw itemsErr;
 
-    // Telegram xabarnomalari (asinxron, javobni kutdirmaymiz)
+    // Telegram xabarnomalari (asinxron)
     notifyAdminGroup(order, itemsForMessage).catch(console.error);
     notifyCustomer(telegram_user_id, order.id).catch(console.error);
 
     res.status(201).json({ success: true, order_id: order.id, total_price });
   } catch (err) {
-    console.error(err);
+    console.error('Buyurtma yaratishda xato:', err);
     res.status(500).json({ error: 'Buyurtma yaratishda xatolik yuz berdi' });
   }
 });
 
-app.get('/', (req, res) => res.send('Fastfood API ishlayapti ✅'));
+// ============ CLIENT FRONTEND SERVING ============
+async function setupFrontend() {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const hasDist = fs.existsSync(path.join(clientDistDir, 'index.html'));
 
-const PORT = process.env.PORT || 3000;
+  if (!isProduction) {
+    try {
+      const { createServer: createViteServer } = await import('vite');
+      const vite = await createViteServer({
+        server: { middlewareMode: true, host: '0.0.0.0' },
+        appType: 'spa',
+        root: clientDir,
+      });
+      app.use(vite.middlewares);
+      return;
+    } catch (err) {
+      console.warn('Vite middleware could not start, falling back to static files:', err.message);
+    }
+  }
 
-// Bot ishga tushirish (long polling — Render uchun eng oddiy usul)
-bot.launch().then(() => console.log('🤖 Telegram bot ishga tushdi'));
+  if (hasDist) {
+    app.use(express.static(clientDistDir));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(clientDistDir, 'index.html'));
+    });
+  } else {
+    app.get('/', (req, res) => {
+      res.send('Fastfood API ishlayapti ✅ (Frontend dist yaratilmoqda)');
+    });
+  }
+}
 
-app.listen(PORT, () => console.log(`🚀 Server ${PORT}-portda ishlayapti`));
+const PORT = 3000;
+
+setupFrontend().then(() => {
+  // Bot ishga tushirish (agar token mavjud bo'lsa)
+  bot.launch()
+    .then(() => console.log('🤖 Telegram bot ishga tushdi'))
+    .catch((err) => console.warn('Telegram bot ishga tushmadi:', err.message));
+
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server http://0.0.0.0:${PORT} da ishlayapti`);
+  });
+});
 
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
