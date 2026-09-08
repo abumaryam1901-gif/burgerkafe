@@ -43,106 +43,149 @@ function createMockSupabase() {
     order_items: [],
     restaurant_settings: [...initialRestaurantSettings],
   };
-  let nextCategoryId = 100;
-  let nextProductId = 100;
   let nextOrderId = 1001;
   let nextOrderItemId = 1;
-  const nextIdFor = (tableName) => {
-    if (tableName === 'orders') return nextOrderId++;
-    if (tableName === 'order_items') return nextOrderItemId++;
-    if (tableName === 'categories') return nextCategoryId++;
-    if (tableName === 'products') return nextProductId++;
-    return Date.now() + Math.floor(Math.random() * 1000);
-  };
+  let nextCategoryId = 10;
+  let nextProductId = 100;
 
   return {
     from(tableName) {
-      let data = [...(store[tableName] || [])];
+      if (!store[tableName]) {
+        store[tableName] = [];
+      }
+
+      let operation = 'select'; // 'select' | 'insert' | 'update' | 'delete'
+      let updatePayload = null;
       let inserted = null;
-      let op = 'select';
-      let pendingPatch = null;
+      let sortConfig = null;
+      const filters = [];
+
+      const execute = () => {
+        if (operation === 'insert') {
+          return inserted;
+        }
+
+        if (operation === 'update') {
+          const updatedItems = [];
+          store[tableName] = store[tableName].map((item) => {
+            const matches = filters.every((fn) => fn(item));
+            if (matches) {
+              const updated = {
+                ...item,
+                ...updatePayload,
+                updated_at: new Date().toISOString(),
+              };
+              updatedItems.push(updated);
+              return updated;
+            }
+            return item;
+          });
+          return updatedItems;
+        }
+
+        if (operation === 'delete') {
+          const remaining = [];
+          const deleted = [];
+          store[tableName].forEach((item) => {
+            const matches = filters.every((fn) => fn(item));
+            if (matches) {
+              deleted.push(item);
+            } else {
+              remaining.push(item);
+            }
+          });
+          store[tableName] = remaining;
+          return deleted;
+        }
+
+        // Default: 'select'
+        let results = [...store[tableName]];
+        for (const fn of filters) {
+          results = results.filter(fn);
+        }
+        if (sortConfig) {
+          const { field, ascending } = sortConfig;
+          results.sort((a, b) => {
+            if (a[field] < b[field]) return ascending ? -1 : 1;
+            if (a[field] > b[field]) return ascending ? 1 : -1;
+            return 0;
+          });
+        }
+        return results;
+      };
 
       const chain = {
         select(cols = '*') {
           return chain;
         },
         order(field, { ascending = true } = {}) {
-          data.sort((a, b) => {
-            if (a[field] < b[field]) return ascending ? -1 : 1;
-            if (a[field] > b[field]) return ascending ? 1 : -1;
-            return 0;
-          });
+          sortConfig = { field, ascending };
           return chain;
         },
         eq(field, val) {
-          data = data.filter((item) => item[field] === val);
+          filters.push((item) => item[field] === val);
+          return chain;
+        },
+        neq(field, val) {
+          filters.push((item) => item[field] !== val);
           return chain;
         },
         in(field, vals) {
           const set = new Set(vals);
-          data = data.filter((item) => set.has(item[field]));
+          filters.push((item) => set.has(item[field]));
           return chain;
         },
         insert(rows) {
+          operation = 'insert';
           const toInsert = Array.isArray(rows) ? rows : [rows];
           const created = [];
           for (const row of toInsert) {
+            let id = row.id;
+            if (!id) {
+              if (tableName === 'orders') id = nextOrderId++;
+              else if (tableName === 'order_items') id = nextOrderItemId++;
+              else if (tableName === 'categories') id = nextCategoryId++;
+              else if (tableName === 'products') id = nextProductId++;
+              else id = Date.now() + Math.floor(Math.random() * 1000);
+            }
             const item = {
-              id: nextIdFor(tableName),
+              id,
               created_at: new Date().toISOString(),
               ...row,
             };
-            store[tableName] = store[tableName] || [];
             store[tableName].push(item);
             created.push(item);
           }
           inserted = Array.isArray(rows) ? created : created[0];
           return chain;
         },
-        update(patch) {
-          op = 'update';
-          pendingPatch = patch;
+        update(payload) {
+          operation = 'update';
+          updatePayload = payload;
           return chain;
         },
         delete() {
-          op = 'delete';
+          operation = 'delete';
           return chain;
         },
         single() {
-          const result = resolveOp();
-          const item = Array.isArray(result) ? result[0] || null : result;
+          const res = execute();
+          const item = Array.isArray(res) ? (res[0] || null) : (res || null);
           return Promise.resolve({ data: item, error: null });
         },
         then(resolve, reject) {
-          const res = resolveOp();
+          const res = execute();
           return Promise.resolve({ data: res, error: null }).then(resolve, reject);
         },
       };
 
-      function resolveOp() {
-        if (op === 'update') {
-          const matchIds = new Set(data.map((d) => d.id));
-          store[tableName] = (store[tableName] || []).map((item) =>
-            matchIds.has(item.id) ? { ...item, ...pendingPatch } : item
-          );
-          return store[tableName].filter((item) => matchIds.has(item.id));
-        }
-        if (op === 'delete') {
-          const matchIds = new Set(data.map((d) => d.id));
-          const removed = (store[tableName] || []).filter((item) => matchIds.has(item.id));
-          store[tableName] = (store[tableName] || []).filter((item) => !matchIds.has(item.id));
-          return removed;
-        }
-        return inserted !== null ? inserted : data;
-      }
-
       return chain;
     },
     storage: {
-      from() {
+      from(bucket) {
         return {
-          upload: async () => ({ data: { path: 'mock' }, error: null }),
-          getPublicUrl: (name) => ({ data: { publicUrl: `https://placehold.co/400x300?text=${encodeURIComponent(name)}` } }),
+          upload: async (filename, buffer, options) => ({ data: { path: filename }, error: null }),
+          getPublicUrl: (filename) => ({ data: { publicUrl: `/uploads/${filename}` } }),
         };
       },
     },

@@ -1,33 +1,48 @@
 import multer from 'multer';
 import { supabase } from './supabase.js';
 
-// Fayllarni xotirada saqlaymiz, keyin Supabase Storage'ga yuboramiz
+// Fayllarni xotirada saqlaymiz
+const storage = multer.memoryStorage();
+
 export const upload = multer({
-  storage: multer.memoryStorage(),
+  storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
   fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) {
-      return cb(new Error('Faqat rasm fayllarini yuklash mumkin'));
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Faqat rasm fayllari qabul qilinadi'));
     }
-    cb(null, true);
   },
 });
 
-const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'products';
-
 export async function uploadImageToSupabase(file) {
-  const ext = (file.originalname.split('.').pop() || 'jpg').toLowerCase();
-  const fileName = `product_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${file.originalname.split('.').pop() || 'jpg'}`;
 
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(fileName, file.buffer, {
-      contentType: file.mimetype,
-      upsert: false,
-    });
+  // Agar Supabase storage mavjud bo'lsa
+  try {
+    if (supabase && supabase.storage) {
+      const { data, error } = await supabase.storage
+        .from('menu-images')
+        .upload(filename, file.buffer, {
+          contentType: file.mimetype,
+          upsert: false,
+        });
 
-  if (error) throw error;
+      if (!error && data) {
+        const { data: publicUrlData } = supabase.storage
+          .from('menu-images')
+          .getPublicUrl(filename);
+        if (publicUrlData?.publicUrl) {
+          return publicUrlData.publicUrl;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Supabase storage upload failed, falling back to data URL:', err.message);
+  }
 
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(fileName);
-  return data.publicUrl;
+  // Fallback: Agar Supabase Storage sozlanmagan bo'lsa, data URL sifatida qaytaramiz
+  const base64 = file.buffer.toString('base64');
+  return `data:${file.mimetype};base64,${base64}`;
 }

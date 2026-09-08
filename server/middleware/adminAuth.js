@@ -1,25 +1,32 @@
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
+const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'burgerkafe-secret-key-2026';
 
 export function signAdminToken(username) {
   return jwt.sign({ username, role: 'admin' }, JWT_SECRET, { expiresIn: '7d' });
 }
 
-export function adminAuthMiddleware(req, res, next) {
-  const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
-
-  if (!token) {
-    return res.status(401).json({ error: 'Avtorizatsiya talab qilinadi' });
-  }
-
+export function verifyAdminToken(token) {
   try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    if (payload.role !== 'admin') throw new Error('Not admin');
-    req.admin = payload;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Token yaroqsiz yoki muddati tugagan' });
+    return jwt.verify(token, JWT_SECRET);
+  } catch {
+    return null;
   }
+}
+
+export function adminAuthMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Avtorizatsiyadan o\'tilmagan' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  const decoded = verifyAdminToken(token);
+
+  if (!decoded) {
+    return res.status(401).json({ error: 'Sessiya muddati tugagan yoki noto\'g\'ri token' });
+  }
+
+  req.admin = decoded;
+  next();
 }

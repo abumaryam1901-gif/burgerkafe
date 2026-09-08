@@ -150,11 +150,98 @@ app.get('/api/settings', async (req, res) => {
   }
 });
 
+// ============ API: MIJOZ BUYURTMALAR TARIXI ============
+app.get('/api/orders/my', async (req, res) => {
+  try {
+    const { telegram_user_id, ids } = req.query;
+    const tgId = Number(telegram_user_id);
+    const parsedIds = ids
+      ? String(ids)
+          .split(',')
+          .map((s) => Number(s.trim()))
+          .filter((n) => !isNaN(n) && n > 0)
+      : [];
+
+    let orders = [];
+
+    if (tgId && tgId > 0) {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('telegram_user_id', tgId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      if (data) orders.push(...data);
+    }
+
+    if (parsedIds.length > 0) {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .in('id', parsedIds)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      if (data) {
+        const existingIds = new Set(orders.map((o) => o.id));
+        for (const ord of data) {
+          if (!existingIds.has(ord.id)) {
+            orders.push(ord);
+            existingIds.add(ord.id);
+          }
+        }
+      }
+    }
+
+    // Sanasi bo'yicha saralash
+    orders.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+    // Taomlar ro'yxatini biriktirish
+    if (orders.length > 0) {
+      const orderIds = orders.map((o) => o.id);
+      const { data: items } = await supabase
+        .from('order_items')
+        .select('*')
+        .in('order_id', orderIds);
+
+      const itemsWithProd = items || [];
+      const productIds = [...new Set(itemsWithProd.map((it) => it.product_id))];
+      const { data: prods } = await supabase
+        .from('products')
+        .select('id, name, image_url')
+        .in('id', productIds);
+
+      const prodMap = new Map((prods || []).map((p) => [p.id, p]));
+
+      const enriched = orders.map((ord) => {
+        const ordItems = itemsWithProd
+          .filter((it) => it.order_id === ord.id)
+          .map((it) => ({
+            ...it,
+            product_name: prodMap.get(it.product_id)?.name || `Mahsulot #${it.product_id}`,
+            product_image: prodMap.get(it.product_id)?.image_url || null,
+          }));
+        return {
+          ...ord,
+          items: ordItems,
+        };
+      });
+
+      return res.json({ orders: enriched });
+    }
+
+    res.json({ orders: [] });
+  } catch (err) {
+    console.error('Mijoz buyurtmalarini olishda xato:', err);
+    res.status(500).json({ error: 'Buyurtmalar tarixini olishda xatolik yuz berdi' });
+  }
+});
+
 // ============ API: TELEGRAM FOYDALANUVCHISI ADMINMI? ============
 // Faqat Admin Panelga kirish tugmasini ko'rsatish/yashirish uchun ishlatiladi.
 // Haqiqiy amallar hamon login (JWT) orqali himoyalangan — bu shunchaki UI signal.
 app.get('/api/check-admin/:telegramId', (req, res) => {
-  const ids = (process.env.ADMIN_TELEGRAM_IDS || '')
+  const adminIdsStr = `${process.env.ADMIN_TELEGRAM_IDS || ''},${process.env.TELEGRAM_ADMIN_CHAT_ID || ''}`;
+  const ids = adminIdsStr
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);

@@ -74,21 +74,6 @@ create policy "Public read products" on products for select using (true);
 -- BOSHLANG'ICH FASTFOOD MA'LUMOTLARI
 -- =========================================
 
--- =========================================
--- ADMIN PANEL: RASMLAR UCHUN STORAGE BUCKET
--- =========================================
--- Mahsulot rasmlarini saqlash uchun ochiq (public) bucket yaratamiz
-insert into storage.buckets (id, name, public)
-values ('products', 'products', true)
-on conflict (id) do nothing;
-
--- Bucket ichidagi fayllarni hamma o'qiy olishi uchun policy
-create policy "Public read product images"
-on storage.objects for select
-using (bucket_id = 'products');
-
--- Faqat service_role (backend) fayl yuklashi/o'chirishi mumkin (RLS avtomatik bypass qilinadi)
-
 insert into categories (name, slug, icon, sort_order) values
 ('Burgerlar', 'burgers', '🍔', 1),
 ('Lavashlar', 'lavash', '🌯', 2),

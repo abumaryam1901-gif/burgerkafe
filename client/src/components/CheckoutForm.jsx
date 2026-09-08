@@ -52,6 +52,15 @@ export default function CheckoutForm({ open, onClose, onSuccess }) {
       const result = await createOrder(payload);
       hapticNotify('success');
       clearCart();
+      try {
+        const savedIds = JSON.parse(localStorage.getItem('my_order_ids') || '[]');
+        if (result.order_id && !savedIds.includes(result.order_id)) {
+          savedIds.unshift(result.order_id);
+          localStorage.setItem('my_order_ids', JSON.stringify(savedIds.slice(0, 50)));
+        }
+      } catch (e) {
+        console.error('Failed to save order ID to localStorage:', e);
+      }
       onSuccess(result.order_id);
     } catch (err) {
       setError(err.message);

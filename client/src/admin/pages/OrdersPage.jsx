@@ -1,214 +1,197 @@
 import { useEffect, useState } from 'react';
-import { MapPin, Phone, X } from 'lucide-react';
+import { RefreshCw, Phone, MapPin, CheckCircle, Clock, Truck, XCircle, AlertCircle } from 'lucide-react';
 import { adminApi } from '../lib/adminApi.js';
 
-const STATUS_OPTIONS = [
-  { value: 'hammasi', label: 'Barchasi' },
-  { value: 'yangi', label: 'Yangi' },
-  { value: 'tayyorlanmoqda', label: 'Tayyorlanmoqda' },
-  { value: 'yolda', label: "Yo'lda" },
-  { value: 'yetkazildi', label: 'Yetkazildi' },
-  { value: 'bekor_qilindi', label: 'Bekor qilindi' },
-];
-
-const STATUS_COLORS = {
-  yangi: 'bg-blue-100 text-blue-700',
-  tayyorlanmoqda: 'bg-amber-100 text-amber-700',
-  yolda: 'bg-purple-100 text-purple-700',
-  yetkazildi: 'bg-green-100 text-green-700',
-  bekor_qilindi: 'bg-red-100 text-red-700',
+const STATUS_LABELS = {
+  yangi: { label: 'Yangi', color: 'bg-blue-50 text-blue-700 border-blue-200', icon: Clock },
+  tayyorlanmoqda: { label: 'Tayyorlanmoqda', color: 'bg-amber-50 text-amber-700 border-amber-200', icon: Clock },
+  yolda: { label: 'Yo\'lda', color: 'bg-purple-50 text-purple-700 border-purple-200', icon: Truck },
+  yetkazildi: { label: 'Yetkazildi', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle },
+  bekor_qilindi: { label: 'Bekor qilindi', color: 'bg-red-50 text-red-700 border-red-200', icon: XCircle },
 };
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('hammasi');
-  const [selected, setSelected] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState('hammasi');
   const [error, setError] = useState('');
+  const [updatingId, setUpdatingId] = useState(null);
 
-  const load = () => {
-    adminApi
-      .getOrders(filter)
-      .then((d) => setOrders(d.orders))
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+  const loadOrders = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await adminApi.getOrders(selectedStatus);
+      setOrders(res.orders || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    setLoading(true);
-    load();
-    // Har 15 soniyada yangi buyurtmalarni avtomatik yangilash
-    const interval = setInterval(load, 15000);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+    loadOrders();
+  }, [selectedStatus]);
 
-  const handleStatusChange = async (order, status) => {
+  const handleStatusChange = async (id, newStatus) => {
+    setUpdatingId(id);
     try {
-      await adminApi.updateOrderStatus(order.id, status);
-      load();
-      if (selected?.id === order.id) setSelected({ ...selected, status });
+      await adminApi.updateOrderStatus(id, newStatus);
+      setOrders((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o))
+      );
     } catch (err) {
-      alert(err.message);
+      alert('Statusni o\'zgartirishda xatolik: ' + err.message);
+    } finally {
+      setUpdatingId(null);
     }
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <h2 className="text-2xl font-bold text-slate-800">Buyurtmalar</h2>
-        <div className="flex gap-2 flex-wrap">
-          {STATUS_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => setFilter(opt.value)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
-                filter === opt.value ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 border border-slate-200'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+    <div className="space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Buyurtmalar ro'yxati</h1>
+          <p className="text-slate-500 text-sm">Kelib tushgan buyurtmalarni ko'rish va boshqarish</p>
         </div>
+        <button
+          onClick={loadOrders}
+          disabled={loading}
+          className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs transition w-fit"
+        >
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          <span>Yangilash</span>
+        </button>
       </div>
 
-      {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-semibold">
+        {['hammasi', 'yangi', 'tayyorlanmoqda', 'yolda', 'yetkazildi', 'bekor_qilindi'].map((st) => (
+          <button
+            key={st}
+            onClick={() => setSelectedStatus(st)}
+            className={`px-3.5 py-2 rounded-xl border transition whitespace-nowrap ${
+              selectedStatus === st
+                ? 'bg-[#8B1121] text-white border-[#8B1121]'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            {st === 'hammasi' ? 'Barchasi' : STATUS_LABELS[st]?.label || st}
+          </button>
+        ))}
+      </div>
 
-      {loading ? (
-        <p className="text-slate-500">Yuklanmoqda...</p>
-      ) : (
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-500 text-left">
-              <tr>
-                <th className="p-4 font-medium">#</th>
-                <th className="p-4 font-medium">Mijoz</th>
-                <th className="p-4 font-medium">Turi</th>
-                <th className="p-4 font-medium">Summa</th>
-                <th className="p-4 font-medium">Status</th>
-                <th className="p-4 font-medium">Vaqt</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((order) => (
-                <tr
-                  key={order.id}
-                  onClick={() => setSelected(order)}
-                  className="border-t border-slate-100 cursor-pointer hover:bg-slate-50"
-                >
-                  <td className="p-4 font-medium text-slate-800">#{order.id}</td>
-                  <td className="p-4 text-slate-700">{order.customer_name}</td>
-                  <td className="p-4 text-slate-500">
-                    {order.delivery_type === 'yetkazib_berish' ? '🚗 Yetkazib berish' : '🏃 Olib ketish'}
-                  </td>
-                  <td className="p-4 font-medium text-slate-800">{Number(order.total_price).toLocaleString()} so'm</td>
-                  <td className="p-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[order.status]}`}>
-                      {STATUS_OPTIONS.find((s) => s.value === order.status)?.label}
-                    </span>
-                  </td>
-                  <td className="p-4 text-slate-400 text-xs">
-                    {new Date(order.created_at).toLocaleString('uz-UZ')}
-                  </td>
-                </tr>
-              ))}
-              {orders.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-slate-400">
-                    Buyurtmalar topilmadi
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl">
+          {error}
         </div>
       )}
 
-      {selected && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg text-slate-800">Buyurtma #{selected.id}</h3>
-              <button onClick={() => setSelected(null)}>
-                <X size={20} className="text-slate-400" />
-              </button>
-            </div>
+      {/* Orders Grid */}
+      {loading ? (
+        <div className="p-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+          Buyurtmalar yuklanmoqda...
+        </div>
+      ) : orders.length === 0 ? (
+        <div className="p-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+          Ushbu statusda hech qanday buyurtma topilmadi
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {orders.map((order) => {
+            const stMeta = STATUS_LABELS[order.status] || {
+              label: order.status,
+              color: 'bg-slate-100 text-slate-700',
+            };
+            const created = new Date(order.created_at || Date.now()).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+              day: '2-digit',
+              month: '2-digit',
+            });
 
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Mijoz</span>
-                <span className="font-medium text-slate-800">{selected.customer_name}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 flex items-center gap-1"><Phone size={14} /> Telefon</span>
-                <a href={`tel:${selected.customer_phone}`} className="font-medium text-blue-600">
-                  {selected.customer_phone}
-                </a>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Yetkazish</span>
-                <span className="font-medium text-slate-800">
-                  {selected.delivery_type === 'yetkazib_berish' ? '🚗 Yetkazib berish' : '🏃 Olib ketish'}
-                </span>
-              </div>
-              {selected.address && (
-                <div className="flex justify-between gap-4">
-                  <span className="text-slate-500 flex items-center gap-1 shrink-0"><MapPin size={14} /> Manzil</span>
-                  <span className="font-medium text-slate-800 text-right">{selected.address}</span>
-                </div>
-              )}
-              {selected.location_lat && (
-                <a
-                  href={`https://maps.google.com/?q=${selected.location_lat},${selected.location_lng}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block text-center bg-slate-100 rounded-xl p-2 text-blue-600 font-medium"
-                >
-                  📍 Xaritada ko'rish
-                </a>
-              )}
-              <div className="flex justify-between">
-                <span className="text-slate-500">To'lov</span>
-                <span className="font-medium text-slate-800 capitalize">{selected.payment_method}</span>
-              </div>
-
-              <div className="border-t border-slate-100 pt-3">
-                <p className="text-slate-500 mb-2">Tarkibi:</p>
-                <div className="space-y-1.5">
-                  {(selected.order_items || []).map((item) => (
-                    <div key={item.id} className="flex justify-between text-slate-700">
-                      <span>{item.products?.name || `Mahsulot #${item.product_id}`} x{item.quantity}</span>
-                      <span>{(item.price_at_order * item.quantity).toLocaleString()} so'm</span>
+            return (
+              <div
+                key={order.id}
+                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div>
+                      <span className="text-base font-black text-slate-900">
+                        #{order.id}
+                      </span>
+                      <span className="text-xs text-slate-400 ml-2">{created}</span>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex justify-between font-bold text-slate-800 border-t border-slate-100 pt-3">
-                <span>Jami</span>
-                <span>{Number(selected.total_price).toLocaleString()} so'm</span>
-              </div>
-
-              <div className="pt-2">
-                <p className="text-slate-500 mb-2">Statusni o'zgartirish:</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {STATUS_OPTIONS.filter((s) => s.value !== 'hammasi').map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => handleStatusChange(selected, opt.value)}
-                      className={`p-2 rounded-xl text-xs font-medium border transition ${
-                        selected.status === opt.value
-                          ? 'bg-slate-900 text-white border-slate-900'
-                          : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
-                      }`}
+                    <span
+                      className={`text-xs px-2.5 py-1 rounded-full font-bold border ${stMeta.color}`}
                     >
-                      {opt.label}
-                    </button>
-                  ))}
+                      {stMeta.label}
+                    </span>
+                  </div>
+
+                  {/* Customer Info */}
+                  <div className="py-3 text-xs space-y-1.5 border-b border-slate-100">
+                    <div className="font-bold text-slate-900 text-sm">{order.customer_name}</div>
+                    <div className="flex items-center gap-1.5 text-slate-600">
+                      <Phone size={13} className="text-slate-400" />
+                      <a href={`tel:${order.customer_phone}`} className="hover:underline font-semibold">
+                        {order.customer_phone}
+                      </a>
+                    </div>
+                    {order.address && (
+                      <div className="flex items-center gap-1.5 text-slate-600">
+                        <MapPin size={13} className="text-slate-400 shrink-0" />
+                        <span>{order.address}</span>
+                      </div>
+                    )}
+                    <div className="text-[11px] text-slate-400">
+                      Yetkazish: <span className="font-semibold text-slate-700 capitalize">{order.delivery_type}</span> | To'lov: <span className="font-semibold text-slate-700 uppercase">{order.payment_method}</span>
+                    </div>
+                  </div>
+
+                  {/* Items List */}
+                  <div className="py-3 space-y-1.5 text-xs">
+                    <div className="font-semibold text-slate-500 uppercase text-[10px]">Tarkibi:</div>
+                    {(order.order_items || []).map((it, idx) => (
+                      <div key={idx} className="flex justify-between items-center text-slate-700">
+                        <span>
+                          {it.products?.name || `Mahsulot #${it.product_id}`} <span className="font-bold text-slate-900">x{it.quantity}</span>
+                        </span>
+                        <span className="font-semibold text-slate-900">
+                          {(it.price_at_order * it.quantity).toLocaleString()} so'm
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Footer with Total & Status Selector */}
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-[10px] uppercase text-slate-400 font-semibold block">Jami:</span>
+                    <span className="text-base font-black text-[#8B1121]">
+                      {Number(order.total_price).toLocaleString()} so'm
+                    </span>
+                  </div>
+
+                  <select
+                    value={order.status}
+                    disabled={updatingId === order.id}
+                    onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                    className="p-2 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#8B1121] bg-white cursor-pointer"
+                  >
+                    <option value="yangi">Yangi</option>
+                    <option value="tayyorlanmoqda">Tayyorlanmoqda</option>
+                    <option value="yolda">Yo'lda</option>
+                    <option value="yetkazildi">Yetkazildi</option>
+                    <option value="bekor_qilindi">Bekor qilindi</option>
+                  </select>
                 </div>
               </div>
-            </div>
-          </div>
+            );
+          })}
         </div>
       )}
     </div>

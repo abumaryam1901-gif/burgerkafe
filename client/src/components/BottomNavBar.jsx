@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Home, Heart, ShoppingCart, User, ArrowRight, LayoutGrid, X } from 'lucide-react';
+import { Home, Heart, ShoppingCart, User, ArrowRight, ChevronLeft, X } from 'lucide-react';
 import { useCartStore } from '../store/cartStore.js';
 import { hapticImpact } from '../lib/telegram.js';
 
@@ -37,11 +37,11 @@ export default function BottomNavBar({ activeTab, onTabChange, onOpenCart, onOpe
               hapticImpact('light');
               setShowFullNav(true);
             }}
-            className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white active:scale-90 transition shrink-0"
-            title="Menyuni ko'rish"
-            aria-label="Menyuni ko'rish"
+            className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white active:scale-90 transition shrink-0 cursor-pointer"
+            title="Menyuga qaytish"
+            aria-label="Menyuga qaytish"
           >
-            <LayoutGrid size={18} strokeWidth={2.2} />
+            <ChevronLeft size={20} strokeWidth={2.5} />
           </button>
 
           {/* Checkout & Total Summary */}

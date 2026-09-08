@@ -25,6 +25,15 @@ export async function fetchSettings() {
   return res.json();
 }
 
+export async function fetchMyOrders({ telegramUserId, orderIds } = {}) {
+  const params = new URLSearchParams();
+  if (telegramUserId) params.append('telegram_user_id', telegramUserId);
+  if (orderIds && orderIds.length > 0) params.append('ids', orderIds.join(','));
+  const res = await fetch(`${API_URL}/api/orders/my?${params.toString()}`);
+  if (!res.ok) throw new Error("Buyurtmalar tarixini yuklab bo'lmadi");
+  return res.json();
+}
+
 export async function checkIsAdmin(telegramUserId) {
   if (!telegramUserId) return false;
   try {

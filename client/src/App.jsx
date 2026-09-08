@@ -25,7 +25,12 @@ export default function App() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [successOrderId, setSuccessOrderId] = useState(null);
   const [isAdminUser, setIsAdminUser] = useState(false);
-  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
+  const [adminPanelOpen, setAdminPanelOpen] = useState(() => {
+    return (
+      typeof window !== 'undefined' &&
+      (window.location.search.includes('admin') || window.location.hash.includes('admin'))
+    );
+  });
   const [isDark, setIsDark] = useState(() => {
     return (
       document.documentElement.classList.contains('dark') ||
@@ -78,6 +83,12 @@ export default function App() {
     return matchesCat && matchesSearch;
   });
 
+  const isRealTelegram = Boolean(
+    typeof window !== 'undefined' &&
+    window.Telegram?.WebApp?.initData &&
+    window.Telegram.WebApp.initData.length > 0
+  );
+
   // Admin Panel Mini App ichida to'liq ekran sifatida ochiladi.
   // "Ilovaga qaytish" tugmasi bosilsa, mijoz interfeysiga qaytadi.
   if (adminPanelOpen) {
@@ -110,6 +121,33 @@ export default function App() {
 
   return (
     <div className="min-h-screen pb-24 max-w-md mx-auto relative bg-[#F7F8FA] dark:bg-[#121214] text-gray-900 dark:text-white shadow-sm transition-colors duration-200">
+      {!isRealTelegram && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20 px-3 py-2 flex items-center justify-between text-[11px] text-amber-900 dark:text-amber-300">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs">🧪</span>
+            <span className="font-semibold text-gray-800 dark:text-zinc-200">
+              {isAdminUser ? '👑 Admin ko‘rinishi' : '👤 Mijoz ko‘rinishi'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsAdminUser(!isAdminUser)}
+              className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-800 border border-amber-500/30 font-semibold text-xs text-gray-800 dark:text-zinc-200 shadow-2xs hover:bg-amber-50 dark:hover:bg-zinc-700 transition cursor-pointer"
+            >
+              {isAdminUser ? "Mijozga o'tish" : "Admin qilish"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setAdminPanelOpen(true)}
+              className="px-2.5 py-1 rounded-lg bg-[#8B1121] text-white font-semibold text-xs shadow-2xs hover:bg-[#A61427] transition cursor-pointer"
+            >
+              Admin Panel ↗
+            </button>
+          </div>
+        </div>
+      )}
+
       <header className="p-4 border-b border-gray-200/70 dark:border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img

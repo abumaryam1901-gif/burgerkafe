@@ -30,7 +30,7 @@ export default function AdminApp({ onClose }) {
   }, []);
 
   if (!authed) {
-    return <AdminLogin onSuccess={() => setAuthed(true)} />;
+    return <AdminLogin onSuccess={() => setAuthed(true)} onClose={onClose} />;
   }
 
   const handleLogout = () => {
@@ -41,9 +41,9 @@ export default function AdminApp({ onClose }) {
   const Page = PAGES[page] || DashboardPage;
 
   return (
-    <div className="min-h-screen bg-slate-100 flex">
+    <div className="min-h-screen bg-slate-100 flex flex-col md:flex-row">
       <Sidebar active={page} onSelect={setPage} onLogout={handleLogout} onClose={onClose} />
-      <main className="flex-1 p-3 md:p-8 overflow-x-auto">
+      <main className="flex-1 p-3 md:p-8 pb-24 md:pb-8 overflow-x-auto">
         <Page />
       </main>
     </div>

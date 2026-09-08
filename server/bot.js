@@ -49,28 +49,6 @@ export async function notifyCustomer(telegramUserId, orderId) {
   }
 }
 
-const STATUS_LABELS = {
-  yangi: '🆕 Yangi',
-  tayyorlanmoqda: '👨‍🍳 Tayyorlanmoqda',
-  yolda: '🚗 Yo\'lda',
-  yetkazildi: '✅ Yetkazildi',
-  bekor_qilindi: '❌ Bekor qilindi',
-};
-
-// Buyurtma statusi o'zgarganda mijozga xabar yuborish
-export async function notifyCustomerStatusUpdate(telegramUserId, orderId, status) {
-  try {
-    if (!telegramUserId) return;
-    const label = STATUS_LABELS[status] || status;
-    await bot.telegram.sendMessage(
-      telegramUserId,
-      `📦 Buyurtma #${orderId} holati yangilandi:\n\n${label}`
-    );
-  } catch (err) {
-    console.warn('Status xabarini yuborishda ogohlantirish:', err.message);
-  }
-}
-
 // Oshxona/admin guruhiga xabarnoma yuborish
 export async function notifyAdminGroup(order, items) {
   const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
@@ -115,3 +93,25 @@ export async function notifyAdminGroup(order, items) {
     console.warn('Admin guruhiga xabar yuborishda ogohlantirish:', err.message);
   }
 }
+
+export async function notifyCustomerStatusUpdate(telegramUserId, orderId, status) {
+  if (!process.env.BOT_TOKEN || !telegramUserId) return;
+
+  const statusTexts = {
+    yangi: '🆕 Yangi buyurtma qabul qilindi',
+    tayyorlanmoqda: '👨‍🍳 Buyurtmangiz oshxonada tayyorlanmoqda',
+    yolda: '🚗 Kuryer yo\'lda, tez orada yetkaziladi',
+    yetkazildi: '✅ Buyurtmangiz muvaffaqiyatli yetkazildi. Yoqimli ishtaha!',
+    bekor_qilindi: '❌ Buyurtmangiz bekor qilindi',
+  };
+
+  const text = statusTexts[status] || `Buyurtma holati: ${status}`;
+  const message = `Buyurtma #${orderId}\n\n${text}`;
+
+  try {
+    await bot.telegram.sendMessage(telegramUserId, message);
+  } catch (err) {
+    console.warn(`Mijozga status yuborishda ogohlantirish (${telegramUserId}):`, err.message);
+  }
+}
+
