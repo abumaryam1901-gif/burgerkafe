@@ -3,12 +3,18 @@ import { Plus, Minus, Heart } from 'lucide-react';
 import { useCartStore } from '../store/cartStore.js';
 import { hapticImpact } from '../lib/telegram.js';
 
-export default function ProductCard({ product, categoryName }) {
+export default function ProductCard({ product, categoryName, onSelect }) {
   const isFavorite = useCartStore((s) => s.isFavorite(product.id));
   const toggleFavorite = useCartStore((s) => s.toggleFavorite);
   const addItem = useCartStore((s) => s.addItem);
   const decreaseItem = useCartStore((s) => s.decreaseItem);
   const quantity = useCartStore((s) => s.getQuantity(product.id));
+
+  const handleCardClick = () => {
+    if (onSelect) {
+      onSelect(product, categoryName);
+    }
+  };
 
   const handleAdd = (e) => {
     e.stopPropagation();
@@ -29,7 +35,10 @@ export default function ProductCard({ product, categoryName }) {
   };
 
   return (
-    <div className="relative bg-white dark:bg-[#1E1E22] dark:hover:bg-[#232328] rounded-3xl p-3.5 flex flex-col justify-between border border-gray-100 dark:border-white/10 shadow-[0_4px_18px_rgba(0,0,0,0.06)] dark:shadow-[0_6px_20px_rgba(0,0,0,0.35)] hover:shadow-[0_6px_22px_rgba(0,0,0,0.09)] transition-all">
+    <div
+      onClick={handleCardClick}
+      className="relative bg-white dark:bg-[#1E1E22] dark:hover:bg-[#232328] rounded-3xl p-3.5 flex flex-col justify-between border border-gray-100 dark:border-white/10 shadow-[0_4px_18px_rgba(0,0,0,0.06)] dark:shadow-[0_6px_20px_rgba(0,0,0,0.35)] hover:shadow-[0_6px_22px_rgba(0,0,0,0.09)] transition-all cursor-pointer active:scale-[0.99]"
+    >
       {/* Favorite Heart Button */}
       <button
         onClick={handleToggleFavorite}

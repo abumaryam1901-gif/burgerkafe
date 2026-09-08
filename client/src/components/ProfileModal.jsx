@@ -130,8 +130,20 @@ export default function ProfileModal({ open, onClose, onOpenFavorites, onOpenCar
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-white/10 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-[#8B1121]/10 dark:bg-[#8B1121]/20 flex items-center justify-center text-[#8B1121] dark:text-[#ff4d6d] overflow-hidden">
-              <User size={22} strokeWidth={2.2} />
+            <div className="w-12 h-12 rounded-full bg-[#8B1121]/10 dark:bg-[#8B1121]/20 flex items-center justify-center text-[#8B1121] dark:text-[#ff4d6d] overflow-hidden border border-gray-200 dark:border-white/10 shrink-0">
+              <img
+                src={
+                  tgUser?.photo_url ||
+                  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+                }
+                alt={userName}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src =
+                    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
+                }}
+              />
             </div>
             <div>
               <h3 className="font-bold text-base leading-tight">{userName}</h3>

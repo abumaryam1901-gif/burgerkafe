@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Home, Heart, ShoppingCart, User, ArrowRight, ChevronLeft, X } from 'lucide-react';
+import { Home, Heart, ShoppingCart, User, ChevronLeft, X } from 'lucide-react';
 import { useCartStore } from '../store/cartStore.js';
 import { hapticImpact } from '../lib/telegram.js';
 
@@ -61,9 +61,8 @@ export default function BottomNavBar({ activeTab, onTabChange, onOpenCart, onOpe
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5 bg-white text-[#8B1121] px-4 py-2 rounded-full font-bold text-xs shadow-xs hover:bg-gray-100 active:scale-95 transition">
+            <div className="flex items-center justify-center bg-white text-[#8B1121] px-4 py-2 rounded-full font-bold text-xs shadow-xs hover:bg-gray-100 active:scale-95 transition">
               <span>Buyurtma berish</span>
-              <ArrowRight size={14} strokeWidth={2.5} />
             </div>
           </button>
         </div>
